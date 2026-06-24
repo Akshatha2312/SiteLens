@@ -49,12 +49,18 @@ def crawl_site(start_url: str) -> List[Dict[str, str]]:
         from bs4 import BeautifulSoup
         soup_obj = BeautifulSoup(soup, "html.parser")
         for a_tag in soup_obj.find_all("a", href=True):
-            link = a_tag["href"]
-            absolute = urljoin(url, link)
+            href = a_tag.get("href")
+            if not href or not isinstance(href, str):
+                logger.debug("Skipping non-string href: %r (type=%s)", href, type(href))
+                continue
+            logger.debug("Found href: %r (type=%s)", href, type(href))
+            absolute = urljoin(url, href)
+            logger.debug("Resolved absolute URL: %r (type=%s)", absolute, type(absolute))
             if is_internal_link(start_url, absolute):
                 _crawl(absolute, depth + 1)
 
     _crawl(start_url, 0)
     # Save after crawling completes
+    logger.debug("Saving %d pages", len(pages))
     save_pages(pages)
     return pages

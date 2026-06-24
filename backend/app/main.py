@@ -1,25 +1,40 @@
 import logging
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, HttpUrl
+from .models import CrawlRequest, CrawlResponse, ProcessResponse
 from .crawler import crawl_site
+from .processor import process_and_save
 
-app = FastAPI()
-
+# Configure structured logging
 logger = logging.getLogger("sitecrawler")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-class CrawlRequest(BaseModel):
-    url: HttpUrl
-
-class CrawlResponse(BaseModel):
-    status: str
-    pages_crawled: int
+app = FastAPI()
 
 @app.post("/crawl", response_model=CrawlResponse)
-async def crawl(request: CrawlRequest):
+async def crawl(request: CrawlRequest) -> CrawlResponse:
+    """Crawl the given URL recursively and store the results.
+
+    Returns a status and the number of pages crawled.
+    """
     try:
-        result = crawl_site(request.url)
+        result = crawl_site(str(request.url))
         return CrawlResponse(status="success", pages_crawled=len(result))
     except Exception as e:
         logger.exception("Crawl failed for %s", request.url)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/process", response_model=ProcessResponse)
+async def process() -> ProcessResponse:
+    """Process previously crawled data: clean, chunk, and persist.
+
+    Returns counts of cleaned documents and generated chunks.
+    """
+    try:
+        result = process_and_save()
+        return ProcessResponse(status="success", documents=result["documents"], chunks=result["chunks"])
+    except FileNotFoundError as fnf:
+        logger.error("Processing failed: %s", fnf)
+        raise HTTPException(status_code=500, detail=str(fnf))
+    except Exception as e:
+        logger.exception("Processing failed")
         raise HTTPException(status_code=500, detail=str(e))

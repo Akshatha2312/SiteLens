@@ -3,6 +3,7 @@ import logging
 import os
 from typing import List, Dict
 from urllib.parse import urlparse, urljoin
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -10,9 +11,11 @@ from bs4 import BeautifulSoup
 MAX_DEPTH = 3
 MAX_PAGES = 100
 REQUEST_TIMEOUT = 10  # seconds
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
-OUTPUT_FILE = os.path.join(DATA_DIR, "crawled_content.json")
 
+# Correct DATA_DIR path
+DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+OUTPUT_FILE = os.path.join(DATA_DIR, "crawled_content.json")
 logger = logging.getLogger("sitecrawler.utils")
 
 def ensure_data_dir() -> None:
@@ -45,6 +48,8 @@ def is_internal_link(base_url: str, link: str) -> bool:
         True if the link shares the same netloc as the base URL.
     """
     try:
+        if not isinstance(link, str):
+            return False
         base_netloc = urlparse(base_url).netloc
         parsed = urlparse(urljoin(base_url, link))
         return parsed.netloc == base_netloc

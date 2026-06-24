@@ -9,6 +9,11 @@ class CrawlResponse(BaseModel):
     status: str
     pages_crawled: int
 
+class ProcessResponse(BaseModel):
+    status: str
+    documents: int
+    chunks: int
+
 class PageData(BaseModel):
     """Data stored for each crawled page."""
     url: str
