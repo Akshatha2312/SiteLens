@@ -1,5 +1,5 @@
 import logging
-from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from .models import CrawlRequest, CrawlResponse, ProcessResponse
 from .crawler import crawl_site
 from .processor import process_and_save
@@ -12,6 +12,13 @@ logger = logging.getLogger("sitecrawler")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/crawl", response_model=CrawlResponse)
 async def crawl(request: CrawlRequest) -> CrawlResponse:
