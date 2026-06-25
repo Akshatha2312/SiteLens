@@ -19,3 +19,8 @@ class EmbedResponse(BaseModel):
     status: str
     embeddings_created: int
 
+class IndexResponse(BaseModel):
+    """Response model for index endpoint"""
+    status: str
+    vectors_indexed: int
+

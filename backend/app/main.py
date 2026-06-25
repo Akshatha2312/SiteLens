@@ -4,7 +4,8 @@ from .models import CrawlRequest, CrawlResponse, ProcessResponse
 from .crawler import crawl_site
 from .processor import process_and_save
 from .embeddings import generate_embeddings
-from .models import CrawlRequest, CrawlResponse, ProcessResponse, EmbedResponse
+from .indexer import build_faiss_index
+from .models import CrawlRequest, CrawlResponse, ProcessResponse, EmbedResponse, IndexResponse
 
 # Configure structured logging
 logger = logging.getLogger("sitecrawler")
@@ -48,4 +49,14 @@ async def embed() -> EmbedResponse:
         return EmbedResponse(status="success", embeddings_created=count)
     except Exception as e:
         logger.exception("Embedding generation failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/index", response_model=IndexResponse)
+async def index() -> IndexResponse:
+    """Build FAISS index from embeddings and return count."""
+    try:
+        count = build_faiss_index()
+        return IndexResponse(status="success", vectors_indexed=count)
+    except Exception as e:
+        logger.exception("FAISS index creation failed")
         raise HTTPException(status_code=500, detail=str(e))
