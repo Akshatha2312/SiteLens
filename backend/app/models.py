@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pydantic import BaseModel, HttpUrl
 
 class CrawlRequest(BaseModel):
@@ -40,3 +41,15 @@ class SearchResponse(BaseModel):
     status: str
     query: str
     results: List[SearchResult]
+
+class AskRequest(BaseModel):
+    question: str
+
+class Source(BaseModel):
+    chunk_id: str
+    score: float
+
+class AskResponse(BaseModel):
+    status: str
+    answer: str
+    sources: List[Source]

@@ -5,8 +5,8 @@ from .crawler import crawl_site
 from .processor import process_and_save
 from .embeddings import generate_embeddings
 from .indexer import build_faiss_index
-from .models import CrawlRequest, CrawlResponse, ProcessResponse, EmbedResponse, IndexResponse, SearchRequest, SearchResponse
-
+from .models import CrawlRequest, CrawlResponse, ProcessResponse, EmbedResponse, IndexResponse, SearchRequest, SearchResponse, AskRequest, AskResponse, Source
+from .rag import generate_answer
 # Configure structured logging
 logger = logging.getLogger("sitecrawler")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -59,4 +59,15 @@ async def index() -> IndexResponse:
         return IndexResponse(status="success", vectors_indexed=count)
     except Exception as e:
         logger.exception("FAISS index creation failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/ask", response_model=AskResponse)
+async def ask(request: AskRequest) -> AskResponse:
+    """Answer a user question using retrieved context and Gemini."""
+    try:
+        answer, sources = generate_answer(request.question)
+        source_objs = [Source(chunk_id=s["chunk_id"], score=s["score"]) for s in sources]
+        return AskResponse(status="success", answer=answer, sources=source_objs)
+    except Exception as e:
+        logger.exception("Ask endpoint failed")
         raise HTTPException(status_code=500, detail=str(e))
