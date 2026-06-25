@@ -24,3 +24,19 @@ class IndexResponse(BaseModel):
     status: str
     vectors_indexed: int
 
+from typing import List, Optional
+
+class SearchRequest(BaseModel):
+    """Request model for semantic search."""
+    query: str
+    k: Optional[int] = 5
+
+class SearchResult(BaseModel):
+    chunk_id: str
+    score: float
+    text: str
+
+class SearchResponse(BaseModel):
+    status: str
+    query: str
+    results: List[SearchResult]

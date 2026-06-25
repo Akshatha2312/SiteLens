@@ -5,7 +5,7 @@ from .crawler import crawl_site
 from .processor import process_and_save
 from .embeddings import generate_embeddings
 from .indexer import build_faiss_index
-from .models import CrawlRequest, CrawlResponse, ProcessResponse, EmbedResponse, IndexResponse
+from .models import CrawlRequest, CrawlResponse, ProcessResponse, EmbedResponse, IndexResponse, SearchRequest, SearchResponse
 
 # Configure structured logging
 logger = logging.getLogger("sitecrawler")
