@@ -3,6 +3,8 @@ from fastapi import FastAPI, HTTPException
 from .models import CrawlRequest, CrawlResponse, ProcessResponse
 from .crawler import crawl_site
 from .processor import process_and_save
+from .embeddings import generate_embeddings
+from .models import CrawlRequest, CrawlResponse, ProcessResponse, EmbedResponse
 
 # Configure structured logging
 logger = logging.getLogger("sitecrawler")
@@ -37,4 +39,13 @@ async def process() -> ProcessResponse:
         raise HTTPException(status_code=500, detail=str(fnf))
     except Exception as e:
         logger.exception("Processing failed")
+        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/embed", response_model=EmbedResponse)
+async def embed() -> EmbedResponse:
+    """Generate embeddings for chunks and return count."""
+    try:
+        count = generate_embeddings()
+        return EmbedResponse(status="success", embeddings_created=count)
+    except Exception as e:
+        logger.exception("Embedding generation failed")
         raise HTTPException(status_code=500, detail=str(e))

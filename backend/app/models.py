@@ -14,8 +14,8 @@ class ProcessResponse(BaseModel):
     documents: int
     chunks: int
 
-class PageData(BaseModel):
-    """Data stored for each crawled page."""
-    url: str
-    title: str
-    content: str
+class EmbedResponse(BaseModel):
+    """Response model for embed endpoint."""
+    status: str
+    embeddings_created: int
+
