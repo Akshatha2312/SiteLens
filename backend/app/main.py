@@ -1,6 +1,8 @@
 import logging
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from .models import CrawlRequest, CrawlResponse, ProcessResponse
+
+
 from .crawler import crawl_site
 from .processor import process_and_save
 from .embeddings import generate_embeddings
@@ -11,10 +13,13 @@ from .rag import generate_answer
 logger = logging.getLogger("sitecrawler")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-app = FastAPI()
+app = FastAPI(title="SiteLens API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
