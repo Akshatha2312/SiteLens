@@ -3,9 +3,12 @@ import json
 import logging
 try:
     from sentence_transformers import SentenceTransformer
-except ImportError:  # pragma: no cover
+except Exception as e:  # pragma: no cover
+    logger = logging.getLogger(__name__)
+    logger.warning("Failed to import SentenceTransformer: %s", e)
     SentenceTransformer = None  # type: ignore
 from typing import List, Dict
+
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -40,6 +43,8 @@ def save_embeddings(embeddings: List[Dict]):
 def generate_embeddings() -> int:
     """Generate embeddings for each chunk and persist them.
 
+    Uses SentenceTransformer if available, otherwise falls back to deterministic.
+
     Returns:
         Number of embeddings created.
     """
@@ -49,26 +54,29 @@ def generate_embeddings() -> int:
         logger.error("Unexpected chunks format: %s", type(chunks))
         raise ValueError("Chunks file must contain a list of objects")
 
-    texts = [chunk.get("text", "") for chunk in chunks]
-    # Initialize model (cached on first call)
-    if SentenceTransformer:
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-        logger.info("Generating embeddings for %d chunks", len(texts))
-        vectors = model.encode(texts, show_progress_bar=False)
+    texts = [chunk.get("content", "") for chunk in chunks]
+    
+    vectors = None
+    if len(texts) == 0:
+        vectors = []
     else:
-        # Fallback: generate deterministic dummy embeddings
-        import random
-        dim = 384  # typical dimension for the model
-        random.seed(42)
-        def _dummy_vector(_: str) -> list:
-            return [random.random() for _ in range(dim)]
-        vectors = [_dummy_vector(t) for t in texts]
-        logger.info("Generated dummy embeddings for %d chunks (dim=%d)", len(texts), dim)
+        try:
+            from sentence_transformers import SentenceTransformer
+            logger.info("Initializing SentenceTransformer('all-MiniLM-L6-v2')...")
+            model = SentenceTransformer('all-MiniLM-L6-v2')
+            vectors = model.encode(texts)
+            logger.info("Generated SentenceTransformer embeddings for %d chunks (dim=384)", len(texts))
+        except Exception as e:
+            logger.warning("SentenceTransformer failed to encode, falling back to deterministic: %s", e)
+            from .utils import get_deterministic_vector
+            vectors = [get_deterministic_vector(t) for t in texts]
+            logger.info("Generated deterministic embeddings for %d chunks (dim=384)", len(texts))
+
     embeddings = []
     for chunk, vector in zip(chunks, vectors):
         embeddings.append({
-            "chunk_id": str(chunk.get("id", "")),
-            "text": chunk.get("text", ""),
+            "chunk_id": str(chunk.get("chunk_id", "")),
+            "text": chunk.get("content", ""),
             "embedding": vector.tolist() if hasattr(vector, "tolist") else vector,
         })
     save_embeddings(embeddings)

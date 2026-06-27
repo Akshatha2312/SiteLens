@@ -1,6 +1,7 @@
 import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 
 from .crawler import crawl_site
@@ -19,11 +20,22 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(_, exc: HTTPException):
+    return JSONResponse(status_code=exc.status_code, content={"status": "error", "detail": exc.detail})
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(_, exc: Exception):
+    logger.exception("Unhandled server error: %s", exc)
+    return JSONResponse(status_code=500, content={"status": "error", "detail": "Internal server error"})
 
 @app.post("/crawl", response_model=CrawlResponse)
 async def crawl(request: CrawlRequest) -> CrawlResponse:
@@ -71,6 +83,25 @@ async def index() -> IndexResponse:
         return IndexResponse(status="success", vectors_indexed=count)
     except Exception as e:
         logger.exception("FAISS index creation failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/search", response_model=SearchResponse)
+async def search(request: SearchRequest) -> SearchResponse:
+    """Search FAISS index for the top-k most similar chunks."""
+    try:
+        from .retriever import search_faiss
+        results = search_faiss(request.query, k=request.k)
+        from .models import SearchResult
+        result_objs = [
+            SearchResult(chunk_id=r["chunk_id"], score=r["score"], text=r["text"])
+            for r in results
+        ]
+        return SearchResponse(status="success", query=request.query, results=result_objs)
+    except FileNotFoundError as fnf:
+        logger.error("Search failed: %s", fnf)
+        raise HTTPException(status_code=500, detail=str(fnf))
+    except Exception as e:
+        logger.exception("Search endpoint failed")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ask", response_model=AskResponse)

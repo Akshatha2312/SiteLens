@@ -9,6 +9,7 @@ from .utils import (
     save_pages,
     MAX_DEPTH,
     MAX_PAGES,
+    MAX_LINKS_PER_PAGE,
 )
 
 logger = logging.getLogger("sitecrawler.crawler")
@@ -32,6 +33,8 @@ def crawl_site(start_url: str) -> List[Dict[str, str]]:
         if depth > MAX_DEPTH:
             logger.debug("Maximum depth %d reached for %s", MAX_DEPTH, url)
             return
+        if depth > 0 and not url.lower().startswith(start_url.lower()):
+            return
         if url in visited:
             logger.debug("Already visited %s", url)
             return
@@ -48,15 +51,21 @@ def crawl_site(start_url: str) -> List[Dict[str, str]]:
         soup = response.text
         from bs4 import BeautifulSoup
         soup_obj = BeautifulSoup(soup, "html.parser")
+        candidate_links = []
         for a_tag in soup_obj.find_all("a", href=True):
             href = a_tag.get("href")
             if not href or not isinstance(href, str):
-                logger.debug("Skipping non-string href: %r (type=%s)", href, type(href))
                 continue
-            logger.debug("Found href: %r (type=%s)", href, type(href))
             absolute = urljoin(url, href)
-            logger.debug("Resolved absolute URL: %r (type=%s)", absolute, type(absolute))
             if is_internal_link(start_url, absolute):
+                candidate_links.append(absolute)
+
+        seen_links = set()
+        for absolute in candidate_links[:MAX_LINKS_PER_PAGE]:
+            if absolute in seen_links:
+                continue
+            seen_links.add(absolute)
+            if depth < MAX_DEPTH:
                 _crawl(absolute, depth + 1)
 
     _crawl(start_url, 0)

@@ -5,7 +5,6 @@ from typing import List, Dict, Any
 
 import numpy as np
 import faiss
-from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -28,8 +27,19 @@ def _load_metadata() -> List[Dict[str, Any]]:
     with open(METADATA_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def _load_model() -> SentenceTransformer:
-    return SentenceTransformer("all-MiniLM-L6-v2")
+_model = None
+
+def _get_model():
+    global _model
+    if _model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            logger.info("Initializing cached SentenceTransformer('all-MiniLM-L6-v2')...")
+            _model = SentenceTransformer('all-MiniLM-L6-v2')
+        except Exception as e:
+            logger.warning("Failed to initialize SentenceTransformer: %s", e)
+            _model = "fallback"
+    return _model
 
 def search_faiss(query: str, k: int = 5) -> List[Dict[str, Any]]:
     """Search FAISS index for the top‑k most similar chunks.
@@ -37,9 +47,20 @@ def search_faiss(query: str, k: int = 5) -> List[Dict[str, Any]]:
     """
     index = _load_index()
     metadata = _load_metadata()
-    model = _load_model()
-    query_vec = model.encode([query], show_progress_bar=False)
-    query_vec = np.array(query_vec, dtype="float32")
+    
+    model = _get_model()
+    if model != "fallback" and model is not None:
+        try:
+            query_vec = model.encode([query])
+            query_vec = np.array(query_vec, dtype="float32")
+        except Exception as e:
+            logger.warning("Failed to encode query with SentenceTransformer, falling back to deterministic: %s", e)
+            from .utils import get_deterministic_vector
+            query_vec = np.array([get_deterministic_vector(query)], dtype="float32")
+    else:
+        from .utils import get_deterministic_vector
+        query_vec = np.array([get_deterministic_vector(query)], dtype="float32")
+
     distances, indices = index.search(query_vec, k)
     results: List[Dict[str, Any]] = []
     for dist, idx in zip(distances[0], indices[0]):

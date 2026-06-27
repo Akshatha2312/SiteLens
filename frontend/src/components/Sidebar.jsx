@@ -37,12 +37,17 @@ export default function Sidebar({ url, setUrl, addMessage }) {
           toast.success('Index completed');
           break;
         case 'search':
+          addMessage('user', `Search query: "${searchQuery}"`);
           response = await api.post('/search', { query: searchQuery });
           toast.success('Search completed');
-          addMessage('assistant', `Search results: ${JSON.stringify(response.data)}`);
+          addMessage('assistant', `Search results: ${JSON.stringify(response.data.results, null, 2)}`);
+          setSearchQuery('');
           break;
         case 'ask':
-          response = await api.post('/ask', { question: askPrompt });
+          addMessage('user', askPrompt);
+          const currentPrompt = askPrompt;
+          setAskPrompt('');
+          response = await api.post('/ask', { question: currentPrompt });
           toast.success('Answer received');
           addMessage('assistant', response.data.answer || JSON.stringify(response.data));
           break;
@@ -51,7 +56,8 @@ export default function Sidebar({ url, setUrl, addMessage }) {
       }
     } catch (err) {
       console.error(err);
-      toast.error(`Error during ${action}: ${err.message}`);
+      const detail = err.response?.data?.detail || err.message || 'Request failed';
+      toast.error(`Error during ${action}: ${detail}`);
     } finally {
       setLoading((prev) => ({ ...prev, [action]: false }));
     }
