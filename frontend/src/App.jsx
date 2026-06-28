@@ -54,6 +54,7 @@ export default function App() {
   const [stats, setStats] = useState(initialStats);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [loadingActions, setLoadingActions] = useState({});
   const [websiteInfo, setWebsiteInfo] = useState(initialWebsiteInfo);
   const [pipelineState, setPipelineState] = useState(initialPipelineState);
   const [websiteHistory, setWebsiteHistory] = useState([]);
@@ -128,6 +129,11 @@ export default function App() {
     }, 1000);
     return () => window.clearInterval(interval);
   }, [pipelineState.status]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, []);
 
   const addMessage = (messageOrRole, content) => {
     const baseMessage = typeof messageOrRole === 'object'
@@ -292,6 +298,100 @@ export default function App() {
     window.dispatchEvent(new CustomEvent('sitelens-select-question', { detail: question }));
   };
 
+  const isValidUrl = (value) => {
+    if (!value) return false;
+    try {
+      new URL(value);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handlePipelineAction = async (action, options = {}) => {
+    setLoadingActions((prev) => ({ ...prev, [action]: true }));
+    try {
+      let response;
+
+      switch (action) {
+        case 'crawl':
+          if (!isValidUrl(url)) {
+            failPipelineStep('crawl', 'Please enter a valid website URL');
+            toast.error('Please enter a valid website URL');
+            return;
+          }
+          beginPipelineStep('crawl', 'Crawling website');
+          response = await api.post('/crawl', { url });
+          incrementStat('pagesCrawled');
+          setWebsiteInfo((prev) => ({
+            ...prev,
+            currentUrl: url,
+            domain: getDomain(url),
+            pagesCrawled: prev.pagesCrawled === '--' ? 1 : Number(prev.pagesCrawled) + 1,
+            lastCrawlTime: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+            processingDuration: 'In progress',
+            indexStatus: 'Pending indexing',
+          }));
+          addWebsiteToHistory(url);
+          completePipelineStep('crawl', 'Crawl completed');
+          toast.success('Crawl completed');
+          break;
+        case 'process':
+          beginPipelineStep('process', 'Processing content');
+          response = await api.post('/process');
+          incrementStat('chunks');
+          incrementStat('documentsProcessed');
+          setWebsiteInfo((prev) => ({ ...prev, processingDuration: 'Completed', indexStatus: 'Ready for indexing' }));
+          completePipelineStep('process', 'Processing complete');
+          toast.success('Processing complete');
+          break;
+        case 'embed':
+          beginPipelineStep('embed', 'Generating embeddings');
+          response = await api.post('/embed');
+          incrementStat('embeddings');
+          completePipelineStep('embed', 'Embeddings created');
+          toast.success('Embeddings created');
+          break;
+        case 'index':
+          beginPipelineStep('index', 'Building index');
+          response = await api.post('/index');
+          incrementStat('faissVectors');
+          setWebsiteInfo((prev) => ({ ...prev, indexStatus: 'Indexed' }));
+          completePipelineStep('index', 'Index built');
+          toast.success('Index built');
+          break;
+        case 'search':
+          if (!options.query?.trim()) {
+            toast.error('Please enter a search query');
+            return;
+          }
+          addMessage('user', `Search query: "${options.query.trim()}"`);
+          beginPipelineStep('search', 'Searching knowledge base');
+          response = await api.post('/search', { query: options.query.trim() });
+          completePipelineStep('search', 'Search completed');
+          toast.success('Search completed');
+          addMessage('assistant', `Search results: ${JSON.stringify(response.data.results || response.data, null, 2)}`);
+          break;
+        case 'ask':
+          if (!options.question?.trim()) {
+            toast.error('Please enter a question');
+            return;
+          }
+          await handleAsk(options.question.trim(), options);
+          break;
+        default:
+          break;
+      }
+    } catch (err) {
+      const detail = err.response?.data?.detail || err.message || 'Request failed';
+      failPipelineStep(action, `${action} failed: ${detail}`);
+      toast.error(`${action} failed: ${detail}`);
+      setUiError({ title: `${action} failed`, explanation: detail, retryAction: () => handlePipelineAction(action, options) });
+    } finally {
+      setLoadingActions((prev) => ({ ...prev, [action]: false }));
+    }
+  };
+
   const exportChatMarkdown = () => {
     const markdown = messages
       .map((message) => {
@@ -391,34 +491,30 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(139,94,60,0.18),_transparent_25%),radial-gradient(circle_at_top_right,_rgba(211,212,192,0.2),_transparent_24%),linear-gradient(135deg,_#F3E4C9_0%,_#f9f2e7_55%,_#F3E4C9_100%)] text-[#0A2947] transition-colors duration-300 dark:bg-[radial-gradient(circle_at_top_left,_rgba(139,94,60,0.2),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(211,212,192,0.18),_transparent_28%),linear-gradient(135deg,_#0A2947_0%,_#12375A_50%,_#0A2947_100%)] dark:text-slate-100">
+    <div className="flex min-h-screen flex-col bg-white text-[#111827] transition-colors duration-300">
       <Header
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
         sidebarOpen={sidebarOpen}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenAbout={() => setAboutOpen(true)}
       />
-      <div className="mx-auto flex flex-1 flex-col gap-3 px-2 py-2 sm:px-3 lg:flex-row lg:gap-4 lg:px-4 lg:py-4">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-3 sm:px-5 lg:flex-row lg:px-6 lg:py-4">
         <Sidebar
           url={url}
           setUrl={setUrl}
-          addMessage={addMessage}
           stats={stats}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
-          handleAsk={handleAsk}
-          beginPipelineStep={beginPipelineStep}
-          completePipelineStep={completePipelineStep}
-          failPipelineStep={failPipelineStep}
-          updateWebsiteInfo={setWebsiteInfo}
-          addWebsiteToHistory={addWebsiteToHistory}
+          handlePipelineAction={handlePipelineAction}
+          loadingActions={loadingActions}
           websiteHistory={websiteHistory}
           selectWebsite={selectWebsite}
-          incrementStat={incrementStat}
-          getDomain={getDomain}
-          setUiError={setUiError}
         />
         <Chat
+          url={url}
+          setUrl={setUrl}
+          onPipelineAction={handlePipelineAction}
+          loadingActions={loadingActions}
           messages={messages}
           stats={stats}
           isThinking={isThinking}
@@ -441,48 +537,49 @@ export default function App() {
           animationsEnabled={animationsEnabled}
         />
       </div>
-      <footer className="mx-auto mt-2 flex w-full max-w-7xl flex-col gap-4 border-t border-[#D3D4C0]/60 bg-white/70 px-4 py-5 text-sm text-[#12375A] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="mx-auto mt-4 flex w-full max-w-7xl flex-col gap-3 rounded-[24px] border border-[#E5E7EB] bg-white/95 px-4 py-4 text-sm text-[#6B7280] shadow-[0_16px_36px_-24px_rgba(10,41,71,0.35)] sm:flex-row sm:items-center sm:justify-between sm:px-5 lg:mb-4">
         <div>
-          <p className="font-semibold text-[#0A2947] dark:text-slate-100">SiteLens</p>
-          <p>Built with React + FastAPI • Version 1.0.0</p>
+          <p className="font-semibold text-[#111827]">SiteLens</p>
+          <p className="mt-0.5 text-sm text-[#6B7280]">Version 1.0.0 • Build status: stable • Backend online</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-emerald-700 dark:text-emerald-300">Powered by Gemini</span>
-          <span className="rounded-full border border-[#8B5E3C]/20 bg-[#8B5E3C]/10 px-3 py-1 text-[#8B5E3C] dark:text-[#D3D4C0]">GitHub placeholder</span>
-          <span>© 2026 SiteLens</span>
+          <a href="https://github.com" target="_blank" rel="noreferrer" className="rounded-full border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-1 text-[#111827] transition hover:border-[#0A2947] hover:text-[#0A2947]">
+            GitHub
+          </a>
+          <span className="text-[#6B7280]">© 2026 SiteLens</span>
         </div>
       </footer>
 
       <AnimatePresence>
         {settingsOpen ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-2xl dark:border-slate-700/70 dark:bg-slate-900/90">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A2947]/10 px-4 py-6 ">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg rounded-[28px] border border-[#E5E7EB] bg-white p-6 shadow-[0_20px_45px_-20px_rgba(17,24,39,0.28)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Settings</p>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Fine-tune the workspace for your workflow.</p>
+                  <p className="text-sm font-semibold text-slate-700 text-slate-700">Settings</p>
+                  <p className="mt-1 text-sm text-slate-500 text-slate-500">Fine-tune the workspace for your workflow.</p>
                 </div>
-                <button onClick={() => setSettingsOpen(false)} className="rounded-full border border-[#D3D4C0]/70 bg-[#F3E4C9] px-3 py-1.5 text-sm font-medium text-[#12375A] transition hover:-translate-y-0.5 dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-200">Close</button>
+                <button onClick={() => setSettingsOpen(false)} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:-translate-y-0.5 border-slate-200 bg-slate-50/80 text-slate-700">Close</button>
               </div>
               <div className="mt-5 space-y-4">
-                <label className="flex items-center justify-between rounded-2xl border border-[#D3D4C0]/70 bg-[#F3E4C9]/70 px-3 py-3 text-sm text-[#12375A] dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-300">
+                <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 border-slate-200 bg-slate-50/80 text-slate-600">
                   <span>Auto-scroll</span>
-                  <input type="checkbox" checked={autoScrollEnabled} onChange={() => setAutoScrollEnabled((prev) => !prev)} className="h-4 w-4 rounded border-[#8B5E3C] text-[#8B5E3C]" />
+                  <input type="checkbox" checked={autoScrollEnabled} onChange={() => setAutoScrollEnabled((prev) => !prev)} className="h-4 w-4 rounded border-[#0A2947] text-[#0A2947]" />
                 </label>
-                <label className="flex items-center justify-between rounded-2xl border border-[#D3D4C0]/70 bg-[#F3E4C9]/70 px-3 py-3 text-sm text-[#12375A] dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-300">
+                <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 border-slate-200 bg-slate-50/80 text-slate-600">
                   <span>Animations</span>
-                  <input type="checkbox" checked={animationsEnabled} onChange={() => setAnimationsEnabled((prev) => !prev)} className="h-4 w-4 rounded border-[#8B5E3C] text-[#8B5E3C]" />
+                  <input type="checkbox" checked={animationsEnabled} onChange={() => setAnimationsEnabled((prev) => !prev)} className="h-4 w-4 rounded border-[#0A2947] text-[#0A2947]" />
                 </label>
-                <button onClick={clearHistory} className="flex w-full items-center justify-between rounded-2xl border border-[#D3D4C0]/70 bg-white/80 px-3 py-3 text-sm text-[#12375A] transition hover:-translate-y-0.5 dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-300">
+                <button onClick={clearHistory} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-700 transition hover:-translate-y-0.5 border-slate-200 bg-slate-50/80 text-slate-600">
                   <span>Clear local history</span>
                   <span className="text-xs text-slate-400">Local storage</span>
                 </button>
-                <button onClick={resetDashboard} className="flex w-full items-center justify-between rounded-2xl border border-[#D3D4C0]/70 bg-white/80 px-3 py-3 text-sm text-[#12375A] transition hover:-translate-y-0.5 dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-300">
+                <button onClick={resetDashboard} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-700 transition hover:-translate-y-0.5 border-slate-200 bg-slate-50/80 text-slate-600">
                   <span>Reset dashboard</span>
                   <span className="text-xs text-slate-400">Restore defaults</span>
                 </button>
-                <div className="rounded-2xl border border-[#D3D4C0]/70 bg-[#F3E4C9]/70 px-3 py-3 text-sm text-[#12375A] dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-400">
-                  <p className="font-medium text-slate-700 dark:text-slate-200">Application version</p>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 border-slate-200 bg-slate-50/80 text-slate-500">
+                  <p className="font-medium text-slate-700 text-slate-700">Application version</p>
                   <p className="mt-1">v1.0.0 • Frontend polished for demos</p>
                 </div>
               </div>
@@ -493,27 +590,27 @@ export default function App() {
 
       <AnimatePresence>
         {aboutOpen ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg rounded-[24px] border border-[#D3D4C0]/70 bg-white/90 p-6 shadow-2xl shadow-[#0A2947]/10 dark:border-slate-700/70 dark:bg-slate-900/90">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A2947]/10 px-4 py-6 ">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg rounded-[24px] border border-[#E5E7EB] bg-white p-6 shadow-[0_20px_45px_-20px_rgba(17,24,39,0.28)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">About SiteLens</p>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">RAG-powered website chatbot with a premium AI SaaS shell.</p>
+                  <p className="text-sm font-semibold text-slate-700 text-slate-700">About SiteLens</p>
+                  <p className="mt-1 text-sm text-slate-500 text-slate-500">RAG-powered website chatbot with a premium AI SaaS shell.</p>
                 </div>
-                <button onClick={() => setAboutOpen(false)} className="rounded-full border border-[#D3D4C0]/70 bg-[#F3E4C9] px-3 py-1.5 text-sm font-medium text-[#12375A] transition hover:-translate-y-0.5 dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-200">Close</button>
+                <button onClick={() => setAboutOpen(false)} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:-translate-y-0.5 border-slate-200 bg-slate-50/80 text-slate-700">Close</button>
               </div>
-              <div className="mt-5 space-y-4 text-sm text-slate-600 dark:text-slate-300">
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 dark:border-slate-700/70 dark:bg-slate-800/80">
-                  <p className="font-semibold text-slate-700 dark:text-slate-200">SiteLens</p>
+              <div className="mt-5 space-y-4 text-sm text-slate-600 text-slate-600">
+                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 border-slate-200 bg-slate-50/80">
+                  <p className="font-semibold text-slate-700 text-slate-700">SiteLens</p>
                   <p className="mt-1">A modern RAG-powered website chatbot for exploring crawled content through chat, search, and analytics.</p>
                 </div>
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 dark:border-slate-700/70 dark:bg-slate-800/80">
-                  <p className="font-semibold text-slate-700 dark:text-slate-200">Technology stack</p>
+                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 border-slate-200 bg-slate-50/80">
+                  <p className="font-semibold text-slate-700 text-slate-700">Technology stack</p>
                   <p className="mt-1">Frontend: React, Vite, Tailwind, Framer Motion, Sonner</p>
                   <p>Backend: FastAPI, Gemini, FAISS, LangChain</p>
                 </div>
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 dark:border-slate-700/70 dark:bg-slate-800/80">
-                  <p className="font-semibold text-slate-700 dark:text-slate-200">Developer</p>
+                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 border-slate-200 bg-slate-50/80">
+                  <p className="font-semibold text-slate-700 text-slate-700">Developer</p>
                   <p className="mt-1">Built as a polished AI demo application for hackathons and portfolios.</p>
                   <a href="https://github.com" target="_blank" rel="noreferrer" className="mt-2 inline-flex text-sky-600">GitHub placeholder</a>
                 </div>

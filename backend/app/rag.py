@@ -13,14 +13,20 @@ logger.setLevel(logging.INFO)
 
 from .retriever import search_faiss
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-if not GEMINI_API_KEY or GEMINI_API_KEY == "your_gemini_api_key_here":
-    raise RuntimeError("GEMINI_API_KEY is not configured in backend/.env")
-
-client = genai.Client(api_key=GEMINI_API_KEY)
-
 
 def _get_gemini_client() -> Tuple[object, str]:
+    """Return a configured Gemini client and model name."""
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not api_key or api_key == "your_gemini_api_key_here":
+        raise RuntimeError("GEMINI_API_KEY is not configured. Please add it to backend/.env or the environment.")
+
+    model_name = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+    try:
+        gemini_client = genai.Client(api_key=api_key)
+    except Exception as exc:
+        raise RuntimeError(f"Unable to initialize Gemini client: {exc}") from exc
+
+    return gemini_client, model_name
     """Return a configured Gemini client and model name.
 
     Raises:

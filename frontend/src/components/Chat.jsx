@@ -22,6 +22,7 @@ import {
   ThumbsUp,
   UserRound,
   Zap,
+  Server,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -88,7 +89,7 @@ function renderMarkdownContent(content) {
 
     flushBullets();
     elements.push(
-      <p key={`p-${index}`} className="text-sm leading-7 text-slate-700 dark:text-slate-200">
+      <p key={`p-${index}`} className="text-sm leading-7 text-slate-700">
         {renderInlineContent(trimmed)}
       </p>
     );
@@ -98,7 +99,49 @@ function renderMarkdownContent(content) {
   return elements;
 }
 
-export default function Chat({ messages, stats, isThinking, handleAsk, clearChat, websiteInfo, pipelineState, websiteHistory, recentQuestions, recentAnswers = [], onSelectWebsite, onSelectQuestion, uiError, clearUiError, bookmarkedMessageIds = [], toggleBookmark, onExportMarkdown, onExportPdf, autoScrollEnabled = true, animationsEnabled = true }) {
+function formatSourceLabel(source) {
+  if (source == null) return '';
+  if (typeof source === 'string') return source;
+  if (typeof source === 'object') {
+    if ('chunk_id' in source || 'score' in source) {
+      const chunkId = source.chunk_id ?? source.id ?? 'unknown source';
+      const score = typeof source.score === 'number' ? ` (score: ${source.score.toFixed(2)})` : source.score != null ? ` (score: ${source.score})` : '';
+      return `${chunkId}${score}`;
+    }
+    if ('text' in source) {
+      return source.text;
+    }
+    return JSON.stringify(source);
+  }
+  return String(source);
+}
+
+export default function Chat({
+  url,
+  setUrl,
+  onPipelineAction,
+  loadingActions = {},
+  messages,
+  stats,
+  isThinking,
+  handleAsk,
+  clearChat,
+  websiteInfo,
+  pipelineState,
+  websiteHistory,
+  recentQuestions,
+  recentAnswers = [],
+  onSelectWebsite,
+  onSelectQuestion,
+  uiError,
+  clearUiError,
+  bookmarkedMessageIds = [],
+  toggleBookmark,
+  onExportMarkdown,
+  onExportPdf,
+  autoScrollEnabled = true,
+  animationsEnabled = true,
+}) {
   const bottomRef = useRef(null);
   const [inputValue, setInputValue] = useState('');
   const [copiedId, setCopiedId] = useState(null);
@@ -185,86 +228,141 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
   };
 
   return (
-    <section className="flex-1 overflow-hidden rounded-[24px] border border-[#D3D4C0]/70 bg-white/70 shadow-[0_20px_60px_-25px_rgba(10,41,71,0.25)] backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-900/70">
+    <section className="flex min-h-[620px] min-w-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-[#E5E7EB] bg-white shadow-[0_20px_45px_-22px_rgba(10,41,71,0.16)] lg:min-h-0">
       <div className="flex h-full flex-col">
         <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <button type="button" onClick={onExportMarkdown} className="flex items-center gap-2 rounded-full border border-[#D3D4C0]/70 bg-[#F3E4C9] px-3 py-2 text-sm font-medium text-[#0A2947] transition hover:-translate-y-0.5 dark:border-slate-700/70 dark:bg-slate-900/80 dark:text-slate-300">
+            <button type="button" onClick={onExportMarkdown} className="flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2 text-sm font-medium text-[#111827] transition hover:border-[#0A2947] hover:text-[#0A2947]">
               <Download className="h-4 w-4" />
               Export .md
             </button>
-            <button type="button" onClick={onExportPdf} className="flex items-center gap-2 rounded-full border border-[#D3D4C0]/70 bg-[#F3E4C9] px-3 py-2 text-sm font-medium text-[#0A2947] transition hover:-translate-y-0.5 dark:border-slate-700/70 dark:bg-slate-900/80 dark:text-slate-300">
+            <button type="button" onClick={onExportPdf} className="flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2 text-sm font-medium text-[#111827] transition hover:border-[#0A2947] hover:text-[#0A2947]">
               <Download className="h-4 w-4" />
               Export PDF
             </button>
-            <div className="ml-auto rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+            <div className="ml-auto rounded-full border border-[#E5E7EB] bg-white px-3 py-2 text-sm font-medium text-[#6B7280]">
               {bookmarkedMessageIds.length} saved insights
             </div>
           </div>
 
           {uiError ? (
-            <div className="mb-6 rounded-[24px] border border-rose-200/80 bg-rose-50/90 p-4 shadow-sm dark:border-rose-900/40 dark:bg-rose-950/40">
+            <div className="mb-6 rounded-[24px] border border-rose-200/80 bg-rose-50/90 p-4 shadow-sm border-rose-900/40 bg-rose-950/40">
               <div className="flex items-start gap-3">
                 <AlertCircle className="mt-0.5 h-5 w-5 text-rose-500" />
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">{uiError.title}</p>
-                  <p className="mt-1 text-sm text-rose-600 dark:text-rose-200">{uiError.explanation}</p>
+                  <p className="text-sm font-semibold text-rose-700 text-rose-300">{uiError.title}</p>
+                  <p className="mt-1 text-sm text-rose-600 text-rose-200">{uiError.explanation}</p>
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={uiError.retryAction} className="rounded-full border border-rose-200/80 bg-white/80 px-3 py-1.5 text-sm font-medium text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/50 dark:text-rose-200">Try again</button>
-                <button type="button" onClick={clearUiError} className="rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-600 dark:border-slate-700/70 dark:bg-slate-900/80 dark:text-slate-300">Dismiss</button>
+                <button type="button" onClick={uiError.retryAction} className="rounded-full border border-rose-200/80 bg-white/80 px-3 py-1.5 text-sm font-medium text-rose-700 border-rose-900/40 bg-rose-950/50 text-rose-200">Try again</button>
+                <button type="button" onClick={clearUiError} className="rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-600 border-slate-200 bg-slate-50/80">Dismiss</button>
               </div>
             </div>
           ) : null}
 
+          <div className="mb-4 rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-slate-900">Website URL</p>
+                <p className="text-sm text-slate-500">Enter the site you want to crawl and then run the pipeline.</p>
+              </div>
+              <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+                <input
+                  type="text"
+                  value={url}
+                  onChange={(event) => setUrl(event.target.value)}
+                  placeholder="https://example.com"
+                  className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-[#0A2947] focus:ring-2 focus:ring-[#0A2947]/10 bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => onPipelineAction('crawl')}
+                  disabled={loadingActions.crawl || !url}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0A2947] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#071c32] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Server className="h-4 w-4" /> Crawl
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => onPipelineAction('process')}
+                disabled={loadingActions.process}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#0A2947] hover:text-[#0A2947] disabled:cursor-not-allowed disabled:opacity-50 bg-slate-50"
+              >
+                Process
+              </button>
+              <button
+                type="button"
+                onClick={() => onPipelineAction('embed')}
+                disabled={loadingActions.embed}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#0A2947] hover:text-[#0A2947] disabled:cursor-not-allowed disabled:opacity-50 bg-slate-50"
+              >
+                Embed
+              </button>
+              <button
+                type="button"
+                onClick={() => onPipelineAction('index')}
+                disabled={loadingActions.index}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#0A2947] hover:text-[#0A2947] disabled:cursor-not-allowed disabled:opacity-50 bg-slate-50"
+              >
+                Index
+              </button>
+            </div>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+              Workflow: <span className="font-semibold text-slate-900">Crawl → Process → Embed → Index</span>
+            </div>
+          </div>
+
           <div className="mb-4 grid gap-3 xl:grid-cols-[1.08fr_0.92fr]">
-            <motion.div initial={shouldAnimate ? { opacity: 0, y: 12 } : undefined} animate={shouldAnimate ? { opacity: 1, y: 0 } : undefined} className="rounded-[22px] border border-[#D3D4C0]/70 bg-gradient-to-br from-[#0A2947] via-[#12375A] to-[#8B5E3C] p-4 text-white shadow-xl shadow-[#0A2947]/15">
+            <motion.div initial={shouldAnimate ? { opacity: 0, y: 12 } : undefined} animate={shouldAnimate ? { opacity: 1, y: 0 } : undefined} className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium text-slate-300">Pipeline Health</p>
-                  <h3 className="mt-2 text-xl font-semibold">Live analytics workspace</h3>
-                  <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">Monitor crawl progress, indexing activity, and conversation insights in one place.</p>
+                  <p className="text-sm font-medium text-slate-500">Pipeline Health</p>
+                  <h3 className="mt-2 text-xl font-semibold text-slate-900">Live analytics workspace</h3>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">Monitor crawl progress, indexing activity, and conversation insights in one place.</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
-                  <Activity className="h-5 w-5 text-sky-300" />
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <Activity className="h-5 w-5 text-[#0A2947]" />
                 </div>
               </div>
               <div className="mt-5 flex flex-wrap gap-3">
-                <div className="rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100">
-                  <span className="mr-2 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 text-slate-600">
+                  <span className="mr-2 inline-flex h-2.5 w-2.5 rounded-full bg-[#0A2947]" />
                   Backend {stats.backendStatus || 'Online'}
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100">
-                  <span className="mr-2 inline-flex h-2.5 w-2.5 rounded-full bg-sky-400" />
-                  Gemini ready
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 text-slate-600">
+                  <span className="mr-2 inline-flex h-2.5 w-2.5 rounded-full bg-[#0A2947]" />
+                  Workspace ready
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100">
-                  <span className="mr-2 inline-flex h-2.5 w-2.5 rounded-full bg-violet-400" />
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 text-slate-600">
+                  <span className="mr-2 inline-flex h-2.5 w-2.5 rounded-full bg-[#0A2947]" />
                   FAISS ready
                 </div>
               </div>
             </motion.div>
 
-            <motion.div initial={shouldAnimate ? { opacity: 0, y: 12 } : undefined} animate={shouldAnimate ? { opacity: 1, y: 0 } : undefined} className="rounded-[22px] border border-[#D3D4C0]/70 bg-white/80 p-4 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/80">
+            <motion.div initial={shouldAnimate ? { opacity: 0, y: 12 } : undefined} animate={shouldAnimate ? { opacity: 1, y: 0 } : undefined} className="rounded-[22px] border border-slate-200/70 bg-white/80 p-4 shadow-sm border-slate-200 bg-slate-50/80">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Live pipeline</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Current step and completion state</p>
+                  <p className="text-sm font-semibold text-slate-700">Live pipeline</p>
+                  <p className="text-xs text-slate-500">Current step and completion state</p>
                 </div>
-                <div className="rounded-full bg-sky-500/10 p-2 text-sky-500">
+                <div className="rounded-full bg-[#0A2947]/10 p-2 text-[#0A2947]">
                   <Rocket className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-4">
-                <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
+                <div className="flex items-center justify-between text-sm text-slate-600">
                   <span>{pipelineState.message}</span>
                   <span>{pipelineState.progress}%</span>
                 </div>
-                <div className="mt-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700">
-                  <motion.div animate={{ width: `${pipelineState.progress}%` }} className="h-2 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-violet-500" />
+                <div className="mt-2 h-2 rounded-full bg-slate-200 bg-slate-50">
+                  <motion.div animate={{ width: `${pipelineState.progress}%` }} className="h-2 rounded-full bg-[#0A2947]" />
                 </div>
-                <div className="mt-4 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                <div className="mt-4 flex items-center gap-2 text-sm text-slate-500">
                   <Clock3 className="h-4 w-4" />
                   Elapsed {Math.round(pipelineState.elapsedMs / 1000)}s
                 </div>
@@ -274,9 +372,9 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
 
           <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {metricCards.map((card) => (
-              <motion.div key={card.label} layout initial={shouldAnimate ? { opacity: 0, y: 12 } : undefined} animate={shouldAnimate ? { opacity: 1, y: 0 } : undefined} className="rounded-[20px] border border-[#D3D4C0]/70 bg-white/80 p-3.5 shadow-sm transition hover:-translate-y-0.5 dark:border-slate-700/70 dark:bg-slate-900/80">
-                <p className="text-sm text-slate-500 dark:text-slate-400">{card.label}</p>
-                <div className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+              <motion.div key={card.label} layout initial={shouldAnimate ? { opacity: 0, y: 12 } : undefined} animate={shouldAnimate ? { opacity: 1, y: 0 } : undefined} className="rounded-[20px] border border-slate-200/70 bg-white/80 p-3.5 shadow-sm transition hover:-translate-y-0.5 border-slate-200 bg-slate-50/80">
+                <p className="text-sm text-slate-500">{card.label}</p>
+                <div className="mt-2 text-2xl font-semibold text-slate-900">
                   <AnimatedValue value={card.value ?? '--'} />
                 </div>
               </motion.div>
@@ -284,13 +382,13 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
           </div>
 
           <div className="mb-4 grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-[22px] border border-[#D3D4C0]/70 bg-white/80 p-4 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/80">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-[22px] border border-slate-200/70 bg-white/80 p-4 shadow-sm border-slate-200 bg-slate-50/80">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Pipeline timeline</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">A clear view of each stage and its state</p>
+                  <p className="text-sm font-semibold text-slate-700">Pipeline timeline</p>
+                  <p className="text-xs text-slate-500">A clear view of each stage and its state</p>
                 </div>
-                <div className="rounded-full bg-violet-500/10 p-2 text-violet-500">
+                <div className="rounded-full bg-[#0A2947]/10 p-2 text-[#0A2947]">
                   <CheckCircle2 className="h-5 w-5" />
                 </div>
               </div>
@@ -299,18 +397,18 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
                   const isActive = pipelineState.currentStep === step && pipelineState.status === 'running';
                   const isComplete = pipelineState.completedSteps.includes(step);
                   return (
-                    <div key={step} className={`rounded-2xl border px-3 py-3 ${isActive ? 'border-sky-400 bg-sky-50/80 dark:border-sky-800 dark:bg-sky-900/20' : isComplete ? 'border-emerald-200 bg-emerald-50/80 dark:border-emerald-800 dark:bg-emerald-900/20' : 'border-slate-200/70 bg-slate-50/80 dark:border-slate-700/70 dark:bg-slate-800/80'}`}>
+                    <div key={step} className={`rounded-2xl border px-3 py-3 ${isActive ? 'border-[#0A2947] bg-[#0A2947]/10 border-[#0A2947]/30 bg-[#0A2947]/10' : isComplete ? 'border-slate-300 bg-slate-50 border-slate-200 bg-slate-50' : 'border-slate-200/70 bg-slate-50/80 border-slate-200 bg-slate-50/80'}`}>
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          <div className={`flex h-9 w-9 items-center justify-center rounded-full ${isComplete ? 'bg-emerald-500 text-white' : isActive ? 'bg-sky-500 text-white' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300'}`}>
+                          <div className={`flex h-9 w-9 items-center justify-center rounded-full ${isComplete ? 'bg-[#0A2947] text-white' : isActive ? 'bg-[#0A2947] text-white' : 'bg-slate-200 text-slate-500 bg-slate-50 text-slate-600'}`}>
                             {isComplete ? <CheckCircle2 className="h-4 w-4" /> : <Zap className="h-4 w-4" />}
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{timelineLabels[step]}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{isActive ? 'In progress' : isComplete ? 'Completed' : 'Queued'}</p>
+                            <p className="text-sm font-semibold text-slate-700">{timelineLabels[step]}</p>
+                            <p className="text-xs text-slate-500">{isActive ? 'In progress' : isComplete ? 'Completed' : 'Queued'}</p>
                           </div>
                         </div>
-                        {index < timelineSteps.length - 1 ? <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" /> : null}
+                        {index < timelineSteps.length - 1 ? <div className="h-px flex-1 bg-slate-200 bg-slate-50" /> : null}
                       </div>
                     </div>
                   );
@@ -318,37 +416,37 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
               </div>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-[22px] border border-[#D3D4C0]/70 bg-white/80 p-4 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/80">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-[22px] border border-slate-200/70 bg-white/80 p-4 shadow-sm border-slate-200 bg-slate-50/80">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Website information</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Current crawl context</p>
+                  <p className="text-sm font-semibold text-slate-700">Website information</p>
+                  <p className="text-xs text-slate-500">Current crawl context</p>
                 </div>
                 <div className="rounded-full bg-sky-500/10 p-2 text-sky-500">
                   <FileSearch className="h-5 w-5" />
                 </div>
               </div>
-              <div className="mt-4 space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 dark:border-slate-700/70 dark:bg-slate-800/80">
+              <div className="mt-4 space-y-3 text-sm text-slate-600">
+                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 border-slate-200">
                   <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Current URL</p>
-                  <p className="mt-1 font-medium text-slate-800 dark:text-slate-100">{websiteInfo.currentUrl || 'No site selected yet'}</p>
+                  <p className="mt-1 font-medium text-slate-800 text-slate-900">{websiteInfo.currentUrl || 'No site selected yet'}</p>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 dark:border-slate-700/70 dark:bg-slate-800/80">
+                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 border-slate-200">
                     <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Domain</p>
-                    <p className="mt-1 font-medium text-slate-800 dark:text-slate-100">{websiteInfo.domain}</p>
+                    <p className="mt-1 font-medium text-slate-800 text-slate-900">{websiteInfo.domain}</p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 dark:border-slate-700/70 dark:bg-slate-800/80">
+                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 border-slate-200">
                     <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Pages crawled</p>
-                    <p className="mt-1 font-medium text-slate-800 dark:text-slate-100">{websiteInfo.pagesCrawled}</p>
+                    <p className="mt-1 font-medium text-slate-800 text-slate-900">{websiteInfo.pagesCrawled}</p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 dark:border-slate-700/70 dark:bg-slate-800/80">
+                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 border-slate-200">
                     <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Last crawl</p>
-                    <p className="mt-1 font-medium text-slate-800 dark:text-slate-100">{websiteInfo.lastCrawlTime}</p>
+                    <p className="mt-1 font-medium text-slate-800 text-slate-900">{websiteInfo.lastCrawlTime}</p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 dark:border-slate-700/70 dark:bg-slate-800/80">
+                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 border-slate-200">
                     <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Index status</p>
-                    <p className="mt-1 font-medium text-slate-800 dark:text-slate-100">{websiteInfo.indexStatus}</p>
+                    <p className="mt-1 font-medium text-slate-800 text-slate-900">{websiteInfo.indexStatus}</p>
                   </div>
                 </div>
               </div>
@@ -356,11 +454,11 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
           </div>
 
           <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_1fr]">
-            <motion.div initial={shouldAnimate ? { opacity: 0, y: 10 } : undefined} animate={shouldAnimate ? { opacity: 1, y: 0 } : undefined} className="rounded-[22px] border border-[#D3D4C0]/70 bg-white/80 p-4 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/80">
+            <motion.div initial={shouldAnimate ? { opacity: 0, y: 10 } : undefined} animate={shouldAnimate ? { opacity: 1, y: 0 } : undefined} className="rounded-[22px] border border-slate-200/70 bg-white/80 p-4 shadow-sm border-slate-200 bg-slate-50/80">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Recent websites</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Jump back into a previous crawl instantly</p>
+                  <p className="text-sm font-semibold text-slate-700">Recent websites</p>
+                  <p className="text-xs text-slate-500">Jump back into a previous crawl instantly</p>
                 </div>
                 <div className="rounded-full bg-amber-500/10 p-2 text-amber-500">
                   <DatabaseZap className="h-5 w-5" />
@@ -368,7 +466,7 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
               </div>
               <div className="mt-4 space-y-2">
                 {(websiteHistory.length ? websiteHistory : [websiteInfo.currentUrl || 'https://example.com']).map((site) => (
-                  <button key={site} type="button" onClick={() => onSelectWebsite(site)} className="flex w-full items-center justify-between rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:-translate-y-0.5 dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-300">
+                  <button key={site} type="button" onClick={() => onSelectWebsite(site)} className="flex w-full items-center justify-between rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:-translate-y-0.5 border-slate-200">
                     <span className="truncate">{site}</span>
                     <span className="text-xs text-slate-400">Reload</span>
                   </button>
@@ -376,32 +474,32 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
               </div>
             </motion.div>
 
-            <motion.div initial={shouldAnimate ? { opacity: 0, y: 10 } : undefined} animate={shouldAnimate ? { opacity: 1, y: 0 } : undefined} className="rounded-[22px] border border-[#D3D4C0]/70 bg-white/80 p-4 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/80">
+            <motion.div initial={shouldAnimate ? { opacity: 0, y: 10 } : undefined} animate={shouldAnimate ? { opacity: 1, y: 0 } : undefined} className="rounded-[22px] border border-slate-200/70 bg-white/80 p-4 shadow-sm border-slate-200 bg-slate-50/80">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Recent questions</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Reuse the last prompts you asked</p>
+                  <p className="text-sm font-semibold text-slate-700">Recent questions</p>
+                  <p className="text-xs text-slate-500">Reuse the last prompts you asked</p>
                 </div>
-                <div className="rounded-full bg-sky-500/10 p-2 text-sky-500">
+                <div className="rounded-full bg-[#0A2947]/10 p-2 text-[#0A2947]">
                   <MessageCircleMore className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-4 space-y-2">
                 {recentQuestions.length ? recentQuestions.map((question) => (
-                  <button key={question} type="button" onClick={() => onSelectQuestion(question)} className="flex w-full items-center justify-between rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:-translate-y-0.5 dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-300">
+                  <button key={question} type="button" onClick={() => onSelectQuestion(question)} className="flex w-full items-center justify-between rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:-translate-y-0.5 border-slate-200">
                     <span className="truncate">{question}</span>
                     <span className="text-xs text-slate-400">Reuse</span>
                   </button>
-                )) : <p className="text-sm text-slate-500 dark:text-slate-400">No recent prompts yet.</p>}
+                )) : <p className="text-sm text-slate-500">No recent prompts yet.</p>}
               </div>
-              <div className="mt-4 border-t border-slate-200/70 pt-3 dark:border-slate-700/70">
+              <div className="mt-4 border-t border-slate-200/70 pt-3 border-slate-200">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Recent answers</p>
                 <div className="mt-2 space-y-2">
                   {recentAnswers.length ? recentAnswers.slice(0, 3).map((answer) => (
-                    <div key={answer} className="rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 py-2 text-sm text-slate-600 dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-300">
+                    <div key={answer} className="rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 py-2 text-sm text-slate-600 border-slate-200">
                       <p className="line-clamp-2">{answer}</p>
                     </div>
-                  )) : <p className="text-sm text-slate-500 dark:text-slate-400">No answers saved yet.</p>}
+                  )) : <p className="text-sm text-slate-500">No answers saved yet.</p>}
                 </div>
               </div>
             </motion.div>
@@ -411,39 +509,39 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
             <div className="flex h-full flex-col justify-center gap-6">
               <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
                 <div className="space-y-6">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-[#D3D4C0]/70 bg-[#F3E4C9]/80 px-3 py-1 text-sm font-medium text-[#12375A] dark:text-sky-300">
-                    <Sparkles className="h-4 w-4" />
+                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700 text-slate-600">
+                    <Sparkles className="h-4 w-4 text-[#0A2947]" />
                     Premium AI research workspace
                   </div>
                   <div className="space-y-3">
-                    <h2 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100 sm:text-4xl">
+                    <h2 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
                       Ask anything about your crawled website.
                     </h2>
-                    <p className="max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">
+                    <p className="max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
                       Crawl a site, turn it into context, and ask grounded questions with a polished chat experience.
                     </p>
                   </div>
 
-                  <div className="rounded-[24px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-700/70 dark:bg-slate-800/80">
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Example URLs</p>
+                  <div className="rounded-[24px] border border-slate-200/70 bg-slate-50/80 p-4 border-slate-200">
+                    <p className="text-sm font-semibold text-slate-700">Example URLs</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {exampleUrls.map((url) => (
-                        <span key={url} className="rounded-full border border-slate-200/80 bg-white/80 px-3 py-1.5 text-sm text-slate-600 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/80 dark:text-slate-300">
+                        <span key={url} className="rounded-full border border-slate-200/80 bg-white/80 px-3 py-1.5 text-sm text-slate-600 shadow-sm border-slate-200 bg-slate-50/80">
                           {url}
                         </span>
                       ))}
                     </div>
                   </div>
 
-                  <div className="rounded-[24px] border border-slate-200/70 bg-white/70 p-4 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/70">
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Example questions</p>
+                  <div className="rounded-[24px] border border-slate-200/70 bg-white/70 p-4 shadow-sm border-slate-200 bg-slate-50/70">
+                    <p className="text-sm font-semibold text-slate-700">Example questions</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {exampleQuestions.map((question) => (
                         <button
                           key={question}
                           type="button"
                           onClick={() => setInputValue(question)}
-                          className="rounded-full bg-gradient-to-r from-[#0A2947] to-[#8B5E3C] px-3 py-1.5 text-sm font-medium text-white shadow-lg shadow-[#0A2947]/15 transition hover:-translate-y-0.5"
+                          className="rounded-full bg-[#0A2947] px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#071c32]"
                         >
                           {question}
                         </button>
@@ -452,14 +550,14 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
                   </div>
                 </div>
 
-                <div className="rounded-[24px] border border-[#D3D4C0]/70 bg-gradient-to-br from-[#F3E4C9]/70 via-white to-[#D3D4C0]/50 p-5 shadow-inner dark:border-slate-700/70">
-                  <div className="flex h-full min-h-[280px] flex-col justify-between rounded-[22px] border border-white/70 bg-white/70 p-5 shadow-sm backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-900/70">
+                <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex h-full min-h-[280px] flex-col justify-between rounded-[22px] border border-white/70 bg-white/70 p-5 shadow-sm border-slate-200/70 bg-slate-50/70">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Live overview</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Your pipeline and insights stay in one place.</p>
+                        <p className="text-sm font-semibold text-slate-700">Live overview</p>
+                        <p className="text-xs text-slate-500">Your pipeline and insights stay in one place.</p>
                       </div>
-                      <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-500">
+                      <div className="rounded-full bg-[#0A2947]/10 p-2 text-[#0A2947]">
                         <MessageCircleMore className="h-5 w-5" />
                       </div>
                     </div>
@@ -469,13 +567,13 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
                         { label: 'Embeddings', value: stats.embeddings },
                         { label: 'Response Time', value: stats.responseTime },
                       ].map((item) => (
-                        <div key={item.label} className="flex items-center justify-between rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 py-2.5 dark:border-slate-700/70 dark:bg-slate-800/80">
-                          <span className="text-sm text-slate-500 dark:text-slate-400">{item.label}</span>
-                          <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{item.value ?? '--'}</span>
+                        <div key={item.label} className="flex items-center justify-between rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 py-2.5 border-slate-200">
+                          <span className="text-sm text-slate-500">{item.label}</span>
+                          <span className="text-sm font-semibold text-slate-800 text-slate-900">{item.value ?? '--'}</span>
                         </div>
                       ))}
                     </div>
-                    <div className="mt-6 rounded-[22px] border border-dashed border-slate-300/70 p-4 text-center text-sm text-slate-500 dark:border-slate-700/70 dark:text-slate-400">
+                    <div className="mt-6 rounded-[22px] border border-dashed border-slate-300/70 p-4 text-center text-sm text-slate-500 border-slate-200">
                       Start by entering a website and launching the pipeline.
                     </div>
                   </div>
@@ -497,56 +595,63 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
                     transition={shouldAnimate ? { duration: 0.2 } : undefined}
                     className={`flex items-start gap-3 ${msg.role === 'assistant' ? 'justify-end' : ''}`}
                   >
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${msg.role === 'assistant' ? 'bg-gradient-to-br from-[#0A2947] to-[#8B5E3C] text-white shadow-lg shadow-[#0A2947]/15' : 'bg-[#F3E4C9] text-[#12375A] dark:bg-slate-800 dark:text-slate-200'}`}>
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${msg.role === 'assistant' ? 'bg-[#0A2947] text-white shadow-sm' : 'bg-slate-100 text-slate-700 bg-slate-50 text-slate-700'}`}>
                       {msg.role === 'assistant' ? <Bot className="h-5 w-5" /> : <UserRound className="h-5 w-5" />}
                     </div>
-                    <div className={`w-full max-w-[78%] rounded-[22px] border px-4 py-3 shadow-sm ${msg.role === 'assistant' ? 'border-[#D3D4C0]/70 bg-gradient-to-br from-[#F3E4C9]/80 to-white text-[#12375A] dark:border-slate-700/70 dark:text-slate-200' : 'border-[#D3D4C0]/70 bg-[#F3E4C9]/60 text-[#12375A] dark:border-slate-700/80 dark:bg-slate-800/90 dark:text-slate-200'}`}>
+                    <div className={`w-full max-w-[min(86%,640px)] rounded-[20px] border px-3.5 py-2.5 shadow-sm break-words ${msg.role === 'assistant' ? 'ml-auto border-[#E5E7EB] bg-white text-[#111827]' : 'mr-auto border-[#E5E7EB] bg-[#F8FAFC] text-[#111827]'}`}>
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
                           {msg.role === 'assistant' ? 'SiteLens AI' : 'You'}
                         </p>
                         <span className="text-[11px] text-slate-400">{formatTime(msg.timestamp)}</span>
                       </div>
-                      <div className="mt-3 space-y-2">
+                      <div className="mt-2.5 space-y-1.5">
                         {typeof msg.content === 'string' ? renderMarkdownContent(msg.content) : msg.content}
                       </div>
-                      {msg.role === 'assistant' && (msg.sources || msg.similarity !== null) ? (
-                        <div className="mt-4 rounded-2xl border border-slate-200/70 bg-white/70 p-3 text-sm text-slate-600 dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-300">
+                      {msg.role === 'assistant' && ((Array.isArray(msg.sources) && msg.sources.length > 0) || msg.sources || msg.similarity != null) ? (
+                        <div className="mt-3 rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] p-2.5 text-sm text-[#6B7280]">
                           {msg.sources ? (
                             <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Sources</p>
-                              <div className="mt-2 space-y-1">
-                                {Array.isArray(msg.sources) ? msg.sources.map((source, sourceIndex) => <p key={`${source}-${sourceIndex}`} className="truncate">• {source}</p>) : <p>• {msg.sources}</p>}
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Sources</p>
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {(Array.isArray(msg.sources) ? msg.sources : [msg.sources]).map((source, sourceIndex) => {
+                                  const sourceLabel = formatSourceLabel(source);
+                                  return (
+                                    <span key={`${sourceLabel}-${sourceIndex}`} className="rounded-full border border-[#E5E7EB] bg-white px-2.5 py-1 text-[10px] font-medium text-[#6B7280]">
+                                      {sourceLabel}
+                                    </span>
+                                  );
+                                })}
                               </div>
                             </div>
                           ) : null}
-                          {msg.similarity !== null && msg.similarity !== undefined ? (
+                          {msg.similarity != null ? (
                             <div className="mt-2">
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Similarity</p>
-                              <p className="mt-1 font-medium text-slate-700 dark:text-slate-200">{msg.similarity}</p>
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Similarity</p>
+                              <p className="mt-1 text-sm font-medium text-slate-700">{msg.similarity}</p>
                             </div>
                           ) : null}
                         </div>
                       ) : null}
                       {msg.role === 'assistant' ? (
-                        <div className="mt-4 flex flex-wrap items-center gap-2">
-                          <button type="button" onClick={() => copyAnswer(msg.content, idx)} className="flex items-center gap-1 rounded-full border border-slate-200/70 bg-white/80 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:-translate-y-0.5 dark:border-slate-700/70 dark:bg-slate-900/80 dark:text-slate-300">
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <button type="button" onClick={() => copyAnswer(msg.content, idx)} className="flex items-center gap-1 rounded-full border border-slate-200/70 bg-white/80 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:-translate-y-0.5 border-slate-200 bg-slate-50/80">
                             {copiedId === idx ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                             Copy
                           </button>
-                          <button type="button" onClick={() => submitQuestion(msg.question || '', { regenerate: true })} className="flex items-center gap-1 rounded-full border border-slate-200/70 bg-white/80 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:-translate-y-0.5 dark:border-slate-700/80 dark:bg-slate-900/80 dark:text-slate-300">
+                          <button type="button" onClick={() => submitQuestion(msg.question || '', { regenerate: true })} className="flex items-center gap-1 rounded-full border border-slate-200/70 bg-white/80 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:-translate-y-0.5 border-slate-200/80 bg-slate-50/80">
                             <RefreshCw className="h-3.5 w-3.5" />
                             Regenerate
                           </button>
-                          <button type="button" onClick={() => handleFeedback(idx, 'up')} className={`flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-medium transition hover:-translate-y-0.5 ${feedback[idx] === 'up' ? 'border-sky-400 bg-sky-500/10 text-sky-600 dark:text-sky-300' : 'border-slate-200/70 bg-white/80 text-slate-600 dark:border-slate-700/70 dark:bg-slate-900/80 dark:text-slate-300'}`}>
+                          <button type="button" onClick={() => handleFeedback(idx, 'up')} className={`flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-medium transition hover:-translate-y-0.5 ${feedback[idx] === 'up' ? 'border-sky-400 bg-sky-500/10 text-sky-600 text-sky-300' : 'border-slate-200/70 bg-white/80 text-slate-600 border-slate-200 bg-slate-50/80 text-slate-600'}`}>
                             <ThumbsUp className="h-3.5 w-3.5" />
                             Up
                           </button>
-                          <button type="button" onClick={() => handleFeedback(idx, 'down')} className={`flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-medium transition hover:-translate-y-0.5 ${feedback[idx] === 'down' ? 'border-rose-400 bg-rose-500/10 text-rose-600 dark:text-rose-300' : 'border-slate-200/70 bg-white/80 text-slate-600 dark:border-slate-700/70 dark:bg-slate-900/80 dark:text-slate-300'}`}>
+                          <button type="button" onClick={() => handleFeedback(idx, 'down')} className={`flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-medium transition hover:-translate-y-0.5 ${feedback[idx] === 'down' ? 'border-rose-400 bg-rose-500/10 text-rose-600 text-rose-300' : 'border-slate-200/70 bg-white/80 text-slate-600 border-slate-200 bg-slate-50/80 text-slate-600'}`}>
                             <ThumbsDown className="h-3.5 w-3.5" />
                             Down
                           </button>
-                          <button type="button" onClick={() => toggleBookmark(messageId)} className={`flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-medium transition hover:-translate-y-0.5 ${isBookmarked ? 'border-amber-400 bg-amber-500/10 text-amber-600 dark:text-amber-300' : 'border-slate-200/70 bg-white/80 text-slate-600 dark:border-slate-700/70 dark:bg-slate-900/80 dark:text-slate-300'}`}>
+                          <button type="button" onClick={() => toggleBookmark(messageId)} className={`flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-medium transition hover:-translate-y-0.5 ${isBookmarked ? 'border-amber-400 bg-amber-500/10 text-amber-600 text-amber-300' : 'border-slate-200/70 bg-white/80 text-slate-600 border-slate-200 bg-slate-50/80 text-slate-600'}`}>
                             <Bookmark className={`h-3.5 w-3.5 ${isBookmarked ? 'fill-current' : ''}`} />
                             {isBookmarked ? 'Saved' : 'Save'}
                           </button>
@@ -560,11 +665,11 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
 
               {isThinking ? (
                 <motion.div initial={shouldAnimate ? { opacity: 0, y: 8 } : undefined} animate={shouldAnimate ? { opacity: 1, y: 0 } : undefined} className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0A2947] to-[#8B5E3C] text-white shadow-lg shadow-[#0A2947]/15">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#0A2947] text-white shadow-sm">
                     <Bot className="h-5 w-5" />
                   </div>
-                  <div className="max-w-[70%] rounded-[22px] border border-[#D3D4C0]/70 bg-white/90 px-4 py-3 shadow-sm dark:border-slate-700/80 dark:bg-slate-800/90">
-                    <div className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+                  <div className="max-w-[70%] rounded-[22px] border border-slate-200 bg-white/90 px-4 py-3 shadow-sm border-slate-200/80 bg-slate-50/90">
+                    <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
                       <LoaderCircle className="h-4 w-4 animate-spin" />
                       Thinking...
                     </div>
@@ -586,8 +691,8 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
           <div ref={bottomRef} />
         </div>
 
-        <div className="border-t border-[#D3D4C0]/70 bg-white/70 px-3 py-3 backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-900/70 sm:px-4 lg:px-5">
-          <div className="mx-auto flex max-w-3xl items-center gap-2 rounded-[999px] border border-[#D3D4C0]/70 bg-[#F3E4C9]/70 p-2 shadow-inner dark:border-slate-700/80 dark:bg-slate-800/90">
+        <div className="sticky bottom-0 border-t border-[#E5E7EB] bg-white/95 px-3 py-3 backdrop-blur-sm sm:px-4 lg:px-5">
+          <div className="mx-auto flex max-w-3xl items-center gap-2 rounded-[999px] border border-[#E5E7EB] bg-[#F8FAFC] p-2 shadow-inner">
             <textarea
               value={inputValue}
               onChange={(event) => setInputValue(event.target.value)}
@@ -595,10 +700,10 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
               placeholder="Ask anything about the crawled website..."
               rows={1}
               disabled={isThinking}
-              className="max-h-32 min-h-[48px] flex-1 resize-none border-0 bg-transparent px-3 py-2 text-sm text-[#0A2947] outline-none placeholder:text-[#12375A]/70 disabled:cursor-not-allowed dark:text-slate-200"
+              className="max-h-32 min-h-[48px] flex-1 resize-none border-0 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-500/70 disabled:cursor-not-allowed text-slate-700"
             />
             <div className="flex items-center gap-2">
-              <button type="button" onClick={clearChat} className="rounded-full border border-[#D3D4C0]/70 bg-white/80 px-3 py-2 text-sm font-medium text-[#12375A] transition hover:-translate-y-0.5 dark:border-slate-700/70 dark:bg-slate-900/80 dark:text-slate-300">
+              <button type="button" onClick={clearChat} className="rounded-full border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 transition hover:-translate-y-0.5 bg-slate-50/80 text-slate-600">
                 Clear
               </button>
               <motion.button
@@ -606,7 +711,7 @@ export default function Chat({ messages, stats, isThinking, handleAsk, clearChat
                 onClick={() => void submitQuestion(inputValue)}
                 whileTap={{ scale: 0.96 }}
                 disabled={isThinking || !inputValue.trim()}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-r from-[#8B5E3C] via-[#D3D4C0] to-[#0A2947] text-white shadow-lg shadow-[#8B5E3C]/20 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0A2947] text-white shadow-sm transition hover:bg-[#071c32] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ArrowUp className="h-4 w-4" />
               </motion.button>

@@ -45,6 +45,9 @@ def crawl_site(start_url: str) -> List[Dict[str, str]]:
             pages.append(page_data)
             logger.info("Crawled (%d) %s", len(pages), url)
         except Exception as e:
+            if depth == 0:
+                logger.error("Root crawl failed for %s: %s", url, e)
+                raise
             logger.warning("Failed to fetch %s: %s", url, e)
             return
         # Parse links and recurse

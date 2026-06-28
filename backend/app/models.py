@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List, Optional
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 class CrawlRequest(BaseModel):
@@ -35,8 +35,16 @@ class IndexResponse(BaseModel):
 
 class SearchRequest(BaseModel):
     """Request model for semantic search."""
-    query: str
-    k: Optional[int] = 5
+    query: str = Field(..., min_length=1)
+    k: Optional[int] = Field(5, gt=0, le=50)
+
+    @field_validator("query")
+    @classmethod
+    def normalize_query(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Search query must not be empty")
+        return cleaned
 
 
 class SearchResult(BaseModel):
@@ -55,7 +63,15 @@ class SearchResponse(BaseModel):
 
 class AskRequest(BaseModel):
     """Request model for ask endpoint."""
-    question: str
+    question: str = Field(..., min_length=1)
+
+    @field_validator("question")
+    @classmethod
+    def normalize_question(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Question must not be empty")
+        return cleaned
 
 
 class Source(BaseModel):
