@@ -491,14 +491,14 @@ export default function App() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-[#111827] transition-colors duration-300">
+    <div className="flex flex-col bg-white text-[#0A2947] transition-colors duration-300">
       <Header
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
         sidebarOpen={sidebarOpen}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenAbout={() => setAboutOpen(true)}
       />
-      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-3 sm:px-5 lg:flex-row lg:px-6 lg:py-4">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-3 sm:px-5 lg:flex-row lg:px-6 lg:py-4">
         <Sidebar
           url={url}
           setUrl={setUrl}
@@ -537,49 +537,49 @@ export default function App() {
           animationsEnabled={animationsEnabled}
         />
       </div>
-      <footer className="mx-auto mt-4 flex w-full max-w-7xl flex-col gap-3 rounded-[24px] border border-[#E5E7EB] bg-white/95 px-4 py-4 text-sm text-[#6B7280] shadow-[0_16px_36px_-24px_rgba(10,41,71,0.35)] sm:flex-row sm:items-center sm:justify-between sm:px-5 lg:mb-4">
+      <footer className="mx-auto mt-4 flex w-full max-w-7xl flex-col gap-3 rounded-[24px] border border-[#D3D4C0] bg-white/95 px-4 py-4 text-sm text-[#8B5E3C] shadow-[0_16px_36px_-24px_rgba(10,41,71,0.35)] sm:flex-row sm:items-center sm:justify-between sm:px-5 lg:mb-4">
         <div>
-          <p className="font-semibold text-[#111827]">SiteLens</p>
-          <p className="mt-0.5 text-sm text-[#6B7280]">Version 1.0.0 • Build status: stable • Backend online</p>
+          <p className="font-semibold text-[#0A2947]">SiteLens</p>
+          <p className="mt-0.5 text-sm text-[#8B5E3C]">Version 1.0.0 • Build status: stable • Backend online</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <a href="https://github.com" target="_blank" rel="noreferrer" className="rounded-full border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-1 text-[#111827] transition hover:border-[#0A2947] hover:text-[#0A2947]">
+          <a href="https://github.com" target="_blank" rel="noreferrer" className="rounded-full border border-[#D3D4C0] bg-[#F3E4C9] px-3 py-1 text-[#0A2947] transition hover:border-[#0A2947] hover:text-[#0A2947]">
             GitHub
           </a>
-          <span className="text-[#6B7280]">© 2026 SiteLens</span>
+          <span className="text-[#8B5E3C]">© 2026 SiteLens</span>
         </div>
       </footer>
 
       <AnimatePresence>
         {settingsOpen ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A2947]/10 px-4 py-6 ">
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg rounded-[28px] border border-[#E5E7EB] bg-white p-6 shadow-[0_20px_45px_-20px_rgba(17,24,39,0.28)]">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg rounded-[28px] border border-[#D3D4C0] bg-white p-6 shadow-[0_20px_45px_-20px_rgba(10,41,71,0.28)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-slate-700 text-slate-700">Settings</p>
-                  <p className="mt-1 text-sm text-slate-500 text-slate-500">Fine-tune the workspace for your workflow.</p>
+                  <p className="text-sm font-semibold text-[#0A2947] text-[#0A2947]">Settings</p>
+                  <p className="mt-1 text-sm text-[#8B5E3C] text-[#8B5E3C]">Fine-tune the workspace for your workflow.</p>
                 </div>
-                <button onClick={() => setSettingsOpen(false)} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:-translate-y-0.5 border-slate-200 bg-slate-50/80 text-slate-700">Close</button>
+                <button onClick={() => setSettingsOpen(false)} className="rounded-full border border-[#D3D4C0] bg-[#FFFFFF] px-3 py-1.5 text-sm font-medium text-[#0A2947] transition hover:-translate-y-0.5 border-[#D3D4C0] bg-[#FFFFFF]/80 text-[#0A2947]">Close</button>
               </div>
               <div className="mt-5 space-y-4">
-                <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 border-slate-200 bg-slate-50/80 text-slate-600">
+                <label className="flex items-center justify-between rounded-2xl border border-[#D3D4C0] bg-[#FFFFFF] px-3 py-3 text-sm text-[#0A2947] border-[#D3D4C0] bg-[#FFFFFF]/80 text-[#8B5E3C]">
                   <span>Auto-scroll</span>
                   <input type="checkbox" checked={autoScrollEnabled} onChange={() => setAutoScrollEnabled((prev) => !prev)} className="h-4 w-4 rounded border-[#0A2947] text-[#0A2947]" />
                 </label>
-                <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 border-slate-200 bg-slate-50/80 text-slate-600">
+                <label className="flex items-center justify-between rounded-2xl border border-[#D3D4C0] bg-[#FFFFFF] px-3 py-3 text-sm text-[#0A2947] border-[#D3D4C0] bg-[#FFFFFF]/80 text-[#8B5E3C]">
                   <span>Animations</span>
                   <input type="checkbox" checked={animationsEnabled} onChange={() => setAnimationsEnabled((prev) => !prev)} className="h-4 w-4 rounded border-[#0A2947] text-[#0A2947]" />
                 </label>
-                <button onClick={clearHistory} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-700 transition hover:-translate-y-0.5 border-slate-200 bg-slate-50/80 text-slate-600">
+                <button onClick={clearHistory} className="flex w-full items-center justify-between rounded-2xl border border-[#D3D4C0] bg-white/80 px-3 py-3 text-sm text-[#0A2947] transition hover:-translate-y-0.5 border-[#D3D4C0] bg-[#FFFFFF]/80 text-[#8B5E3C]">
                   <span>Clear local history</span>
-                  <span className="text-xs text-slate-400">Local storage</span>
+                  <span className="text-xs text-[#8B5E3C]">Local storage</span>
                 </button>
-                <button onClick={resetDashboard} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-700 transition hover:-translate-y-0.5 border-slate-200 bg-slate-50/80 text-slate-600">
+                <button onClick={resetDashboard} className="flex w-full items-center justify-between rounded-2xl border border-[#D3D4C0] bg-white/80 px-3 py-3 text-sm text-[#0A2947] transition hover:-translate-y-0.5 border-[#D3D4C0] bg-[#FFFFFF]/80 text-[#8B5E3C]">
                   <span>Reset dashboard</span>
-                  <span className="text-xs text-slate-400">Restore defaults</span>
+                  <span className="text-xs text-[#8B5E3C]">Restore defaults</span>
                 </button>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 border-slate-200 bg-slate-50/80 text-slate-500">
-                  <p className="font-medium text-slate-700 text-slate-700">Application version</p>
+                <div className="rounded-2xl border border-[#D3D4C0] bg-[#FFFFFF] px-3 py-3 text-sm text-[#0A2947] border-[#D3D4C0] bg-[#FFFFFF]/80 text-[#8B5E3C]">
+                  <p className="font-medium text-[#0A2947] text-[#0A2947]">Application version</p>
                   <p className="mt-1">v1.0.0 • Frontend polished for demos</p>
                 </div>
               </div>
@@ -591,28 +591,28 @@ export default function App() {
       <AnimatePresence>
         {aboutOpen ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A2947]/10 px-4 py-6 ">
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg rounded-[24px] border border-[#E5E7EB] bg-white p-6 shadow-[0_20px_45px_-20px_rgba(17,24,39,0.28)]">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg rounded-[24px] border border-[#D3D4C0] bg-white p-6 shadow-[0_20px_45px_-20px_rgba(10,41,71,0.28)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-slate-700 text-slate-700">About SiteLens</p>
-                  <p className="mt-1 text-sm text-slate-500 text-slate-500">RAG-powered website chatbot with a premium AI SaaS shell.</p>
+                  <p className="text-sm font-semibold text-[#0A2947] text-[#0A2947]">About SiteLens</p>
+                  <p className="mt-1 text-sm text-[#8B5E3C] text-[#8B5E3C]">RAG-powered website chatbot with a premium AI SaaS shell.</p>
                 </div>
-                <button onClick={() => setAboutOpen(false)} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:-translate-y-0.5 border-slate-200 bg-slate-50/80 text-slate-700">Close</button>
+                <button onClick={() => setAboutOpen(false)} className="rounded-full border border-[#D3D4C0] bg-[#FFFFFF] px-3 py-1.5 text-sm font-medium text-[#0A2947] transition hover:-translate-y-0.5 border-[#D3D4C0] bg-[#FFFFFF]/80 text-[#0A2947]">Close</button>
               </div>
-              <div className="mt-5 space-y-4 text-sm text-slate-600 text-slate-600">
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 border-slate-200 bg-slate-50/80">
-                  <p className="font-semibold text-slate-700 text-slate-700">SiteLens</p>
+              <div className="mt-5 space-y-4 text-sm text-[#8B5E3C] text-[#8B5E3C]">
+                <div className="rounded-2xl border border-[#D3D4C0]/70 bg-[#FFFFFF]/80 p-3 border-[#D3D4C0] bg-[#FFFFFF]/80">
+                  <p className="font-semibold text-[#0A2947] text-[#0A2947]">SiteLens</p>
                   <p className="mt-1">A modern RAG-powered website chatbot for exploring crawled content through chat, search, and analytics.</p>
                 </div>
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 border-slate-200 bg-slate-50/80">
-                  <p className="font-semibold text-slate-700 text-slate-700">Technology stack</p>
+                <div className="rounded-2xl border border-[#D3D4C0]/70 bg-[#FFFFFF]/80 p-3 border-[#D3D4C0] bg-[#FFFFFF]/80">
+                  <p className="font-semibold text-[#0A2947] text-[#0A2947]">Technology stack</p>
                   <p className="mt-1">Frontend: React, Vite, Tailwind, Framer Motion, Sonner</p>
                   <p>Backend: FastAPI, Gemini, FAISS, LangChain</p>
                 </div>
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 border-slate-200 bg-slate-50/80">
-                  <p className="font-semibold text-slate-700 text-slate-700">Developer</p>
+                <div className="rounded-2xl border border-[#D3D4C0]/70 bg-[#FFFFFF]/80 p-3 border-[#D3D4C0] bg-[#FFFFFF]/80">
+                  <p className="font-semibold text-[#0A2947] text-[#0A2947]">Developer</p>
                   <p className="mt-1">Built as a polished AI demo application for hackathons and portfolios.</p>
-                  <a href="https://github.com" target="_blank" rel="noreferrer" className="mt-2 inline-flex text-sky-600">GitHub placeholder</a>
+                  <a href="https://github.com" target="_blank" rel="noreferrer" className="mt-2 inline-flex text-[#0A2947]">GitHub placeholder</a>
                 </div>
               </div>
             </motion.div>

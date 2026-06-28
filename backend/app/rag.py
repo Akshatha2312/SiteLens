@@ -1,12 +1,13 @@
-import os
 import logging
+import os
 from typing import List, Dict, Tuple
 
 from dotenv import load_dotenv
 from google import genai
+from google.api_core import exceptions as google_exceptions
 
-load_dotenv()
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+load_dotenv(dotenv_path)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -14,33 +15,21 @@ logger.setLevel(logging.INFO)
 from .retriever import search_faiss
 
 
+class GeminiConfigurationError(RuntimeError):
+    """Raised when Gemini API is missing or configured incorrectly."""
+
+
 def _get_gemini_client() -> Tuple[object, str]:
     """Return a configured Gemini client and model name."""
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key or api_key == "your_gemini_api_key_here":
-        raise RuntimeError("GEMINI_API_KEY is not configured. Please add it to backend/.env or the environment.")
+        raise GeminiConfigurationError("Gemini API is not configured. Please check your API key.")
 
     model_name = os.getenv("MODEL_NAME", "gemini-2.5-flash")
     try:
         gemini_client = genai.Client(api_key=api_key)
     except Exception as exc:
-        raise RuntimeError(f"Unable to initialize Gemini client: {exc}") from exc
-
-    return gemini_client, model_name
-    """Return a configured Gemini client and model name.
-
-    Raises:
-        RuntimeError: if the API key is missing or the client cannot be initialized.
-    """
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key or api_key.strip() == "" or api_key.strip() == "your_gemini_api_key_here":
-        raise RuntimeError("GEMINI_API_KEY is not configured in backend/.env")
-
-    model_name = os.getenv("MODEL_NAME", "gemini-2.5-flash")
-    try:
-        gemini_client = genai.Client(api_key=api_key)
-    except Exception as exc:
-        raise RuntimeError(f"Unable to initialize Gemini client: {exc}") from exc
+        raise GeminiConfigurationError("Gemini API is not configured. Please check your API key.") from exc
 
     return gemini_client, model_name
 
@@ -99,16 +88,27 @@ def generate_answer(question: str, top_k: int = 5) -> Tuple[str, List[Dict]]:
         return "I could not find that information on the website.", []
 
     prompt = _build_prompt(results, question)
+    sources = [{"chunk_id": r.get("chunk_id"), "score": r.get("score")} for r in results]
+
     try:
         gemini_client, model_name = _get_gemini_client()
+    except GeminiConfigurationError:
+        raise
+    except Exception as exc:
+        logger.warning("Gemini client initialization failed, using context fallback: %s", exc)
+        return _build_context_fallback_answer(results, question), sources
+
+    try:
         response = gemini_client.models.generate_content(model=model_name, contents=prompt)
         answer_text = getattr(response, "text", "") or ""
         if not answer_text.strip():
             raise RuntimeError("Gemini returned an empty response")
+    except GeminiConfigurationError:
+        raise
+    except (google_exceptions.Unauthenticated, google_exceptions.PermissionDenied):
+        raise GeminiConfigurationError("Gemini API is not configured. Please check your API key.")
     except Exception as exc:
-        reason = str(exc)
-        logger.warning("Gemini request failed, using context fallback: %s", reason)
-        answer_text = _build_context_fallback_answer(results, question, reason=reason)
+        logger.warning("Gemini request failed, using context fallback: %s", exc)
+        answer_text = _build_context_fallback_answer(results, question, reason=str(exc))
 
-    sources = [{"chunk_id": r.get("chunk_id"), "score": r.get("score")} for r in results]
     return answer_text, sources

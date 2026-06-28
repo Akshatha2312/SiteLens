@@ -73,12 +73,12 @@ const Sidebar = React.memo(function Sidebar({
   };
 
   const buttonClass = (action) =>
-    `flex items-center justify-center gap-2 rounded-2xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm font-semibold text-[#0A2947] shadow-sm transition hover:-translate-y-0.5 hover:border-[#0A2947] hover:text-[#0A2947] disabled:cursor-not-allowed disabled:opacity-50 ${
+    `flex items-center justify-center gap-2 rounded-2xl border border-[#D3D4C0] bg-white px-4 py-2.5 text-sm font-semibold text-[#0A2947] shadow-sm transition hover:-translate-y-0.5 hover:border-[#0A2947] hover:text-[#0A2947] disabled:cursor-not-allowed disabled:opacity-50 ${
       isLoading(action) ? 'cursor-wait' : ''
     }`;
 
   const sectionClass = (section) =>
-    `rounded-[20px] border p-3.5 shadow-sm transition duration-200 ${activeSection === section ? 'border-[#0A2947]/20 bg-[#F8FAFC] shadow-[0_12px_30px_-20px_rgba(10,41,71,0.45)]' : 'border-[#E5E7EB] bg-white hover:border-[#0A2947]/20 hover:shadow-md'}`;
+    `rounded-[20px] border p-3.5 shadow-sm transition duration-200 ${activeSection === section ? 'border-[#0A2947]/20 bg-[#F3E4C9] shadow-[0_12px_30px_-20px_rgba(10,41,71,0.45)]' : 'border-[#D3D4C0] bg-white hover:border-[#0A2947]/20 hover:shadow-md'}`;
 
   const statCards = useMemo(
     () => [
@@ -103,16 +103,16 @@ const Sidebar = React.memo(function Sidebar({
         initial={false}
         animate={{ x: isDesktop ? 0 : sidebarOpen ? 0 : '-100%' }}
         transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-        className="fixed left-0 top-0 z-30 flex h-screen w-[270px] max-w-[86vw] shrink-0 flex-col gap-3 overflow-y-auto border-r border-[#E5E7EB] bg-white p-3 shadow-[0_20px_45px_-20px_rgba(17,24,39,0.2)] lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-[270px] lg:max-w-[270px] lg:translate-x-0 lg:rounded-[24px] lg:border lg:p-3.5"
+        className="fixed left-0 top-0 z-30 flex h-screen w-[270px] max-w-[86vw] shrink-0 flex-col gap-3 overflow-y-auto border-r border-[#D3D4C0] bg-white p-3 shadow-[0_20px_45px_-20px_rgba(10,41,71,0.2)] lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-[270px] lg:max-w-[270px] lg:translate-x-0 lg:rounded-[24px] lg:border lg:p-3.5"
       >
         <div role="button" tabIndex={0} onClick={() => setActiveSection('url')} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setActiveSection('url'); } }} className={sectionClass('url')}>
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 text-slate-900">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#0A2947] text-[#0A2947]">
             <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[#0A2947]/10 text-[#0A2947]">
               <Globe2 className="h-4 w-4" />
             </div>
             Website URL
           </div>
-          <label className="mt-3 block text-sm font-medium text-[#6B7280]" htmlFor="url-input">
+          <label className="mt-3 block text-sm font-medium text-[#8B5E3C]" htmlFor="url-input">
             Site URL
           </label>
           <input
@@ -121,20 +121,20 @@ const Sidebar = React.memo(function Sidebar({
             placeholder="https://example.com"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-[#E5E7EB] bg-white px-3 py-2.5 text-sm text-[#111827] outline-none transition focus:border-[#0A2947] focus:ring-2 focus:ring-[#0A2947]/10"
+            className="mt-2 w-full rounded-2xl border border-[#D3D4C0] bg-white px-3 py-2.5 text-sm text-[#0A2947] outline-none transition focus:border-[#0A2947] focus:ring-2 focus:ring-[#0A2947]/10"
           />
           <button
             type="button"
             onClick={() => handleAction('crawl')}
             disabled={isLoading('crawl') || !url}
-            className={`${buttonClass('crawl')} mt-3 w-full border-transparent bg-[#0A2947] text-white hover:bg-[#071c32]`}
+            className={`${buttonClass('crawl')} mt-3 w-full border-transparent bg-[#0A2947] text-white hover:bg-[#0A2947]`}
           >
             <Server className="h-4 w-4" /> Crawl
           </button>
         </div>
 
         <div role="button" tabIndex={0} onClick={() => setActiveSection('pipeline')} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setActiveSection('pipeline'); } }} className={sectionClass('pipeline')}>
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 text-slate-900">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#0A2947] text-[#0A2947]">
             <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[#0A2947]/10 text-[#0A2947]">
               <Layers3 className="h-4 w-4" />
             </div>
@@ -142,13 +142,13 @@ const Sidebar = React.memo(function Sidebar({
           </div>
           <div className="mt-3 space-y-2">
             {pipelineSteps.slice(0, 4).map((step, index) => (
-              <div key={step} className="rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#111827] transition hover:border-[#0A2947]/40 hover:bg-white">
+              <div key={step} className="rounded-2xl border border-[#D3D4C0] bg-[#F3E4C9] px-3 py-2.5 text-sm text-[#0A2947] transition hover:border-[#0A2947]/40 hover:bg-white">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0A2947]/10 text-[#0A2947]">{index + 1}</div>
                     <span>{step}</span>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                  <ChevronRight className="h-4 w-4 text-[#8B5E3C]" />
                 </div>
               </div>
             ))}
@@ -167,7 +167,7 @@ const Sidebar = React.memo(function Sidebar({
         </div>
 
         <div role="button" tabIndex={0} onClick={() => setActiveSection('analytics')} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setActiveSection('analytics'); } }} className={sectionClass('analytics')}>
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 text-slate-900">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#0A2947] text-[#0A2947]">
             <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[#0A2947]/10 text-[#0A2947]">
               <BarChart3 className="h-4 w-4" />
             </div>
@@ -175,16 +175,16 @@ const Sidebar = React.memo(function Sidebar({
           </div>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
             {statCards.map((card) => (
-              <div key={card.label} className="rounded-2xl border border-slate-200 bg-slate-50/90 p-3 border-slate-200 bg-slate-50/80">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6B7280]">{card.label}</p>
-                <p className="mt-1 text-base font-semibold text-[#111827]">{card.value ?? '--'}</p>
+              <div key={card.label} className="rounded-2xl border border-[#D3D4C0] bg-[#FFFFFF]/90 p-3 border-[#D3D4C0] bg-[#FFFFFF]/80">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8B5E3C]">{card.label}</p>
+                <p className="mt-1 text-base font-semibold text-[#0A2947]">{card.value ?? '--'}</p>
               </div>
             ))}
           </div>
         </div>
 
         <div role="button" tabIndex={0} onClick={() => setActiveSection('history')} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setActiveSection('history'); } }} className={sectionClass('history')}>
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 text-slate-900">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#0A2947] text-[#0A2947]">
             <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[#0A2947]/10 text-[#0A2947]">
               <Sparkles className="h-4 w-4" />
             </div>
@@ -196,16 +196,16 @@ const Sidebar = React.memo(function Sidebar({
                 key={site}
                 type="button"
                 onClick={() => selectWebsite(site)}
-                className="flex w-full items-center justify-between rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2.5 text-left text-sm text-[#111827] transition hover:border-[#0A2947]/40 hover:bg-white"
+                className="flex w-full items-center justify-between rounded-2xl border border-[#D3D4C0] bg-[#F3E4C9] px-3 py-2.5 text-left text-sm text-[#0A2947] transition hover:border-[#0A2947]/40 hover:bg-white"
               >
                 <span className="truncate">{site}</span>
-                <ChevronRight className="h-4 w-4 text-slate-400" />
+                <ChevronRight className="h-4 w-4 text-[#8B5E3C]" />
               </button>
             ))}
           </div>
         </div>
 
-        <div className="rounded-[20px] border border-slate-200 bg-white/90 p-3.5 shadow-sm border-slate-200 bg-white/95">
+        <div className="rounded-[20px] border border-[#D3D4C0] bg-white/90 p-3.5 shadow-sm border-[#D3D4C0] bg-white/95">
           <div className="flex items-center gap-2 text-sm font-semibold text-[#0A2947]">
             <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[#0A2947]/10 text-[#0A2947]">
               <MessageSquareText className="h-4 w-4" />
@@ -213,8 +213,8 @@ const Sidebar = React.memo(function Sidebar({
             Quick Actions
           </div>
           <div className="mt-3 space-y-2">
-            <div className="border-t border-slate-200/70 pt-3 border-slate-200">
-              <label className="block text-sm font-medium text-[#111827]" htmlFor="search-input">
+            <div className="border-t border-[#D3D4C0]/70 pt-3 border-[#D3D4C0]">
+              <label className="block text-sm font-medium text-[#0A2947]" htmlFor="search-input">
                 Search
               </label>
               <input
@@ -223,7 +223,7 @@ const Sidebar = React.memo(function Sidebar({
                 placeholder="Search term"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 text-sm text-[#0A2947] outline-none ring-0 transition focus:border-[#0A2947] border-slate-200/80 bg-slate-50/90 text-slate-700"
+                className="mt-2 w-full rounded-2xl border border-[#D3D4C0] bg-white/95 px-3 py-2.5 text-sm text-[#0A2947] outline-none ring-0 transition focus:border-[#0A2947] border-[#D3D4C0]/80 bg-[#FFFFFF]/90 text-[#0A2947]"
               />
               <button
                 type="button"
@@ -234,8 +234,8 @@ const Sidebar = React.memo(function Sidebar({
                 <Search className="h-4 w-4" /> Search
               </button>
             </div>
-            <div className="border-t border-slate-200/70 pt-3 border-slate-200">
-              <label className="block text-sm font-medium text-[#111827]" htmlFor="ask-input">
+            <div className="border-t border-[#D3D4C0]/70 pt-3 border-[#D3D4C0]">
+              <label className="block text-sm font-medium text-[#0A2947]" htmlFor="ask-input">
                 Ask (RAG Chat)
               </label>
               <textarea
@@ -244,7 +244,7 @@ const Sidebar = React.memo(function Sidebar({
                 placeholder="Ask a question..."
                 value={askPrompt}
                 onChange={(e) => setAskPrompt(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 text-sm text-[#0A2947] outline-none ring-0 transition focus:border-[#0A2947] border-slate-200/80 bg-slate-50/90 text-slate-700"
+                className="mt-2 w-full rounded-2xl border border-[#D3D4C0] bg-white/95 px-3 py-2.5 text-sm text-[#0A2947] outline-none ring-0 transition focus:border-[#0A2947] border-[#D3D4C0]/80 bg-[#FFFFFF]/90 text-[#0A2947]"
               />
               <button
                 type="button"

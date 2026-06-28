@@ -1,18 +1,25 @@
+import os
 import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from dotenv import load_dotenv
 
+
+dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+load_dotenv(dotenv_path)
 
 from .crawler import crawl_site
 from .processor import process_and_save
 from .embeddings import generate_embeddings
 from .indexer import build_faiss_index
 from .models import CrawlRequest, CrawlResponse, ProcessResponse, EmbedResponse, IndexResponse, SearchRequest, SearchResponse, AskRequest, AskResponse, Source
-from .rag import generate_answer
+from .rag import GeminiConfigurationError, generate_answer
+
 # Configure structured logging
 logger = logging.getLogger("sitecrawler")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger.info("Loaded backend environment from %s", dotenv_path)
 
 app = FastAPI(title="SiteLens API")
 app.add_middleware(
@@ -111,6 +118,9 @@ async def ask(request: AskRequest) -> AskResponse:
         answer, sources = generate_answer(request.question)
         source_objs = [Source(chunk_id=s["chunk_id"], score=s["score"]) for s in sources]
         return AskResponse(status="success", answer=answer, sources=source_objs)
+    except GeminiConfigurationError as e:
+        logger.warning("Ask endpoint failed due to Gemini configuration: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         logger.exception("Ask endpoint failed")
         raise HTTPException(status_code=500, detail=str(e))
